@@ -5,6 +5,7 @@
 ////// note making 
 /////  ai summarise
 /////  if logout no able to remove todo
+///// to add functionality of cd for sturcuture of directories and files in the virtual file system
 
 // program.
 // command('login')
@@ -94,11 +95,16 @@ const output=document.getElementById('output');
 let todos =
 JSON.parse(localStorage.getItem("todos"))
 || [];
+
+
 let loggedIn=false;
 
 let currentDirectory = "/";
 
-let directories = {
+// to store the directories and files in memory/local storage, so that when the user creates a directory or file, it is saved and can be retrieved later. This is a simple implementation of a virtual file system in the browser.
+let directories =
+JSON.parse(localStorage.getItem("directories"))
+|| {
     "/": {
         folders: [],
         files: []
@@ -106,7 +112,11 @@ let directories = {
 };
 
 let commandHistory = [];
-let fileContents = {};
+
+// to store the contents of files in memory/local storage, so that when the user creates a file and writes to it, the content is saved and can be retrieved later. This is a simple implementation of a virtual file system in the browser.
+let fileContents =
+JSON.parse(localStorage.getItem("fileContents"))
+|| {};
 let notes=[];
 
 ////definig parser for command line arguments
@@ -158,6 +168,11 @@ function todoCommand(args){
 
             todos.push(item);
 
+            localStorage.setItem(
+                "todos",
+                JSON.stringify(todos)
+            );
+
             output.innerHTML +=
             `<div>Added: ${item}</div>`;
 
@@ -201,6 +216,11 @@ function todoCommand(args){
 
             todos.splice(removeIndex,1);
 
+            localStorage.setItem(
+                "todos",
+                JSON.stringify(todos)
+            );
+
             output.innerHTML +=
             `<div>Removed: ${removed}</div>`;
 
@@ -209,6 +229,11 @@ function todoCommand(args){
         case "clear":
 
             todos = [];
+
+            localStorage.setItem(
+                "todos",
+                JSON.stringify(todos)
+            );
 
             output.innerHTML +=
             `<div>All todos cleared</div>`;
@@ -231,6 +256,11 @@ function todoCommand(args){
             }
 
             todos[updateIndex] = newValue;
+            
+            localStorage.setItem(
+                "todos",
+                JSON.stringify(todos)
+            );
 
             output.innerHTML +=
             `<div>Todo updated</div>`;
@@ -349,6 +379,10 @@ function mkdirCommand(args){
 }
 
     directories["/"].folders.push(folderName);
+        localStorage.setItem(
+        "directories",
+        JSON.stringify(directories)
+        );
 
     output.innerHTML +=
     `<div>Folder created: ${folderName}</div>`;
@@ -370,6 +404,10 @@ function touchCommand(args){
 }
 
     directories["/"].files.push(fileName);
+        localStorage.setItem(
+        "directories",
+        JSON.stringify(directories)
+   );
 
     output.innerHTML +=
     `<div>File created: ${fileName}</div>`;
@@ -438,6 +476,10 @@ function writeCommand(args){
     }
 
     fileContents[fileName] = content;
+    localStorage.setItem(
+        "fileContents",
+        JSON.stringify(fileContents)
+    );
 
     output.innerHTML +=
     `<div>Content written to ${fileName}</div>`;
