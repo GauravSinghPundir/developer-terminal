@@ -1,0 +1,21 @@
+body{
+    margin:0;
+    background-color:black;
+    color:lime;
+    font-family:monospace;
+}
+#terminal{
+    padding:20px;
+}
+#commandInput{
+    background:black;
+    color:lime;
+    border:none;
+    outline:none;
+    font-family:monospace;
+    width:90%;
+    font-size:16px;
+}
+.input-line{
+    display:flex;
+}
