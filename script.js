@@ -6,6 +6,10 @@
 /////  ai summarise
 /////  if logout no able to remove todo
 ///// to add functionality of cd for sturcuture of directories and files in the virtual file system
+///// can't go to that path , in cd that doest exists, maybe
+
+
+
 
 // program.
 // command('login')
@@ -99,24 +103,19 @@ JSON.parse(localStorage.getItem("todos"))
 
 let loggedIn=false;
 
-let currentDirectory = "/";
+// let currentDirectory = "/";
+let currentPath = "/";
 
 // to store the directories and files in memory/local storage, so that when the user creates a directory or file, it is saved and can be retrieved later. This is a simple implementation of a virtual file system in the browser.
-let directories =
-JSON.parse(localStorage.getItem("directories"))
+let filesystem =
+JSON.parse(localStorage.getItem("filesystem"))
 || {
-    "/": {
-        folders: [],
-        files: []
-    }
+    "/": {}
 };
 
-let commandHistory = [];
+let commandHistory =[];
+let historyIndex = 0;
 
-// to store the contents of files in memory/local storage, so that when the user creates a file and writes to it, the content is saved and can be retrieved later. This is a simple implementation of a virtual file system in the browser.
-let fileContents =
-JSON.parse(localStorage.getItem("fileContents"))
-|| {};
 let notes=[];
 
 ////definig parser for command line arguments
@@ -315,6 +314,8 @@ function showHelp(){
         <div>ls</div>
         <div>mkdir &lt;foldername&gt;</div>
         <div>touch &lt;filename&gt;</div>
+        <div>tree</div>
+        <div>search &lt;keyword&gt;</div>
         <div>cat &lt;filename&gt;</div>
         <div>write &lt;filename&gt; &lt;content&gt;</div>
 
@@ -360,7 +361,7 @@ function logoutCommand(){
 function pwdCommand(){
 
     output.innerHTML +=
-    `<div>${currentDirectory}</div>`;
+    `<div>${currentPath}</div>`;
 }
 
 function mkdirCommand(args){
@@ -369,120 +370,372 @@ function mkdirCommand(args){
 
     if(!folderName){
         output.innerHTML +=
-        `<div>Usage: mkdir &lt;foldername&gt;</div>`;
+        `<div>Usage: mkdir folderName</div>`;
         return;
     }
-    if(directories["/"].folders.includes(folderName)){
+
+    const current = getCurrentDirectory();
+
+    if(folderName in current){
+
+        output.innerHTML +=
+        `<div>Already exists</div>`;
+
+        return;
+    }
+
+    current[folderName] = {};
+
+    localStorage.setItem(
+        "filesystem",
+        JSON.stringify(filesystem)
+    );
+
     output.innerHTML +=
-    `<div>Folder already exists</div>`;
-    return;
+    `<div>Folder created</div>`;
 }
 
-    directories["/"].folders.push(folderName);
-        localStorage.setItem(
-        "directories",
-        JSON.stringify(directories)
+function getCurrentDirectory(){
+
+    let pathParts =
+        currentPath.split("/")
+        .filter(Boolean);
+
+    let current = filesystem["/"];
+
+    for(let part of pathParts){
+
+        if(!(part in current)){
+            return null;
+        }
+
+        current = current[part];
+    }
+
+    return current;
+}
+
+
+function generateTree(node, prefix = "") {
+
+    let result = [];
+
+    const entries = Object.entries(node);
+
+    entries.forEach(([name, value], index) => {
+
+        const isLast =
+            index === entries.length - 1;
+
+        const connector =
+            isLast ? "└── " : "├── ";
+
+        const displayName =
+            typeof value === "object"
+            ? `[DIR] ${name}`
+            : name;
+
+        result.push(
+            prefix + connector + displayName
         );
+        if(typeof value === "object") {
 
-    output.innerHTML +=
-    `<div>Folder created: ${folderName}</div>`;
+            const nextPrefix =
+                prefix +
+                (isLast
+                    ? "    "
+                    : "│   ");
+
+            result.push(
+                ...generateTree(
+                    value,
+                    nextPrefix
+                )
+            );
+        }
+    });
+
+    return result;
 }
+
+function searchFiles(node, currentPath, keyword, results){
+
+    for(const [name, value] of Object.entries(node)){
+
+        // Folder
+        if(typeof value === "object" && value !== null){
+
+            searchFiles(
+                value,
+                currentPath + "/" + name,
+                keyword,
+                results
+            );
+        }
+
+        // File
+        else{
+
+            if(
+                value.toLowerCase().includes(keyword.toLowerCase())
+            ){
+
+                results.push({
+                    path: currentPath + "/" + name,
+                    content: value
+                });
+            }
+        }
+    }
+}
+
 
 function touchCommand(args){
 
-    const fileName = args[1];
-
+    const fileName=args[1];
     if(!fileName){
-        output.innerHTML +=
-        `<div>Usage: touch &lt;filename&gt;</div>`;
-        return;
-    }
-    if(directories["/"].files.includes(fileName)){
     output.innerHTML +=
-    `<div>File already exists</div>`;
+    `<div>Usage: touch &lt;filename&gt;</div>`;
     return;
 }
 
-    directories["/"].files.push(fileName);
-        localStorage.setItem(
-        "directories",
-        JSON.stringify(directories)
-   );
+    const current=getCurrentDirectory();
+
+    current[fileName]="";
+
+    localStorage.setItem(
+        "filesystem",
+        JSON.stringify(filesystem)
+    );
 
     output.innerHTML +=
-    `<div>File created: ${fileName}</div>`;
+    `<div>File created</div>`;
 }
 
 function lsCommand(){
 
-    if(
-        directories["/"].folders.length === 0 &&
-        directories["/"].files.length === 0
-    ){
-        output.innerHTML +=
-        `<div>Directory is empty</div>`;
-        return;
-    }
+    const current=getCurrentDirectory();
 
+    Object.keys(current).forEach(item=>{
 
-    output.innerHTML +=
-    `<div>Directories:</div>`;
+        if(typeof current[item]==="object"){
 
-    directories["/"].folders.forEach(folder=>{
-        output.innerHTML +=
-        `<div>[DIR] ${folder}</div>`;
-    });
+            output.innerHTML+=
+            `<div>[DIR] ${item}</div>`;
+        }
+        else{
 
-    output.innerHTML +=
-    `<div>Files:</div>`;
-
-    directories["/"].files.forEach(file=>{
-        output.innerHTML +=
-        `<div>${file}</div>`;
+            output.innerHTML+=
+            `<div>${item}</div>`;
+        }
     });
 }
 
-function catCommand(args){
 
-    const fileName = args[1];
+function treeCommand(){
 
-    if(!fileName){
+    output.innerHTML +=
+    `<div>/</div>`;
+
+    const lines =
+        generateTree(filesystem["/"]);
+
+    lines.forEach(line => {
+
         output.innerHTML +=
-        `<div>Usage: cat &lt;filename&gt;</div>`;
+        `<div style="white-space:pre">${line}</div>`;
+    });
+}
+
+function searchCommand(args){
+
+    const keyword = args.slice(1).join(" ");
+
+    if(!keyword){
+
+        output.innerHTML +=
+        `<div>Usage: search &lt;keyword&gt;</div>`;
+
         return;
     }
 
-    if(fileContents[fileName]){
+    let results = [];
+
+    searchFiles(
+        filesystem["/"],
+        "",
+        keyword,
+        results
+    );
+
+    if(results.length === 0){
+
         output.innerHTML +=
-        `<div>${fileContents[fileName]}</div>`;
+        `<div>No matches found.</div>`;
+
+        return;
     }
-    else{
+
+    output.innerHTML +=
+    `<div><b>${results.length} match(es) found:</b></div>`;
+
+    results.forEach(file=>{
+
+        // Show only a short preview instead of the whole file
+        const preview =
+            file.content.length > 80
+            ? file.content.substring(0,80) + "..."
+            : file.content;
+
+        output.innerHTML += `
+            <div>
+                📄 <b>${file.path}</b><br>
+                ${preview}
+            </div>
+        `;
+    });
+}
+
+
+
+function catCommand(args){
+
+    const input = args[1];
+
+    if(!input){
+        output.innerHTML +=
+        `<div>Usage: cat &lt;filename | path&gt;</div>`;
+        return;
+    }
+
+    // -----------------------------
+    // Case 1: Absolute path
+    // -----------------------------
+    if(input.startsWith("/")){
+
+        let current = filesystem["/"];
+
+        const parts = input
+            .split("/")
+            .filter(Boolean);
+
+        const fileName = parts.pop();
+
+        for(const folder of parts){
+
+            if(!(folder in current) ||
+               typeof current[folder] !== "object"){
+
+                output.innerHTML +=
+                `<div>Directory not found</div>`;
+                return;
+            }
+
+            current = current[folder];
+        }
+
+        if(!(fileName in current)){
+            output.innerHTML +=
+            `<div>File not found</div>`;
+            return;
+        }
+
+        output.innerHTML +=
+        `<div>${current[fileName]}</div>`;
+
+        return;
+    }
+
+    // -----------------------------
+    // Case 2: Filename only
+    // -----------------------------
+    const current = getCurrentDirectory();
+
+    if(!(input in current)){
         output.innerHTML +=
         `<div>File not found</div>`;
+        return;
+    }
+
+    output.innerHTML +=
+    `<div>${current[input]}</div>`;
+}
+
+function cdCommand(args){
+    console.log(filesystem);
+console.log(currentPath);
+console.log(getCurrentDirectory());
+    const target=args[1];
+
+    if(!target){
+        currentPath="/";
+        return;
+    }
+
+    if(target===".."){
+
+        if(currentPath==="/"){
+            return;
+        }
+
+        let parts=currentPath
+            .split("/")
+            .filter(Boolean);
+
+        parts.pop();
+
+        currentPath=
+            parts.length===0
+            ? "/"
+            : "/" + parts.join("/");
+
+        return;
+    }
+
+    const current=getCurrentDirectory();
+
+    if(
+        !(target in current) ||
+        typeof current[target] !== "object"
+    ){
+        output.innerHTML+=
+        `<div>Directory not found</div>`;
+        return;
+    }
+
+    if(currentPath==="/"){
+        currentPath += target;
+    }
+    else{
+        currentPath += "/" + target;
     }
 }
 
 function writeCommand(args){
 
-    const fileName = args[1];
+    const fileName=args[1];
 
-    const content =
-    args.slice(2).join(" ");
+    const content=args.slice(2).join(" ");
 
-    if(!fileName){
+    const current=getCurrentDirectory();
+
+    if(!(fileName in current)){
+
         output.innerHTML +=
-        `<div>Usage: write file content</div>`;
+        `<div>File not found</div>`;
+
         return;
     }
 
-    fileContents[fileName] = content;
+    current[fileName]=content;
+
     localStorage.setItem(
-        "fileContents",
-        JSON.stringify(fileContents)
+        "filesystem",
+        JSON.stringify(filesystem)
     );
 
     output.innerHTML +=
-    `<div>Content written to ${fileName}</div>`;
+    `<div>Written successfully</div>`;
 }
 
 function historyCommand(){
@@ -503,7 +756,7 @@ function executeCommand(input){
 
     if(!input.trim()) return;
 
-    commandHistory.push(input);
+    // commandHistory.push(input);
 
     const args= parseCommand(input);
     const command=args[0];
@@ -545,6 +798,19 @@ function executeCommand(input){
             lsCommand();
             break;
 
+        case "tree":
+        treeCommand();
+        break;
+        
+        case "search":
+        searchCommand(args);
+        break;
+
+
+
+
+
+
         case "cat":
             catCommand(args);
             break;
@@ -557,6 +823,9 @@ function executeCommand(input){
             historyCommand();
             break;
 
+        case "cd":
+            cdCommand(args);
+            break;
         
         case "date":
             output.innerHTML+=`<div>${new Date()}</div>`;
@@ -575,13 +844,66 @@ input.addEventListener("keydown", function(e){
 
     if(e.key === "Enter"){
 
-        const command = input.value;
+        const command = input.value.trim();
 
-        output.innerHTML +=
-        `<div>> ${command}</div>`;
+        if(command){
 
-        executeCommand(command);
+            output.innerHTML +=
+            `<div>> ${command}</div>`;
+
+            executeCommand(command);
+
+            commandHistory.push(command);
+
+            historyIndex = commandHistory.length;
+        }
 
         input.value = "";
+    }
+
+    else if(e.key === "ArrowUp"){
+
+        e.preventDefault();
+
+        if(historyIndex > 0){
+
+            historyIndex--;
+
+            input.value =
+            commandHistory[historyIndex];
+            setTimeout(() => {
+                input.selectionStart =
+                input.selectionEnd =
+                input.value.length;
+            }, 0);
+        }
+    }
+
+    else if(e.key === "ArrowDown"){
+
+        e.preventDefault();
+
+        if(
+            historyIndex <
+            commandHistory.length - 1
+        ){
+
+            historyIndex++;
+
+            input.value =
+            commandHistory[historyIndex];
+            setTimeout(() => {
+                input.selectionStart =
+                input.selectionEnd =
+                input.value.length;
+            }, 0);
+        }
+        else{
+
+            historyIndex =
+            commandHistory.length;
+
+            input.value = "";
+        }
     }
 });
