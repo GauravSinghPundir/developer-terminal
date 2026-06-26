@@ -1,21 +1,70 @@
+:root{
+    --bg:#111111;
+    --terminal:#181818;
+    --text:#00ff66;
+    --border:#333;
+}
+
 body{
     margin:0;
-    background-color:black;
-    color:lime;
+    background:var(--bg);
+    color:var(--text);
     font-family:monospace;
 }
 #terminal{
     padding:20px;
+    background:var(--terminal);
+    border:1px solid var(--border);
 }
 #commandInput{
-    background:black;
-    color:lime;
+    background:var(--bg);
+    color:var(--text);
     border:none;
     outline:none;
     font-family:monospace;
     width:90%;
     font-size:16px;
 }
+input{
+    background:transparent;
+    color:var(--text);
+}
 .input-line{
     display:flex;
+}
+
+/* Matrix */
+
+.theme-matrix{
+    --bg:#000;
+    --terminal:#000;
+    --text:#00ff41;
+    --border:#00ff41;
+}
+
+/* Ubuntu */
+
+.theme-ubuntu{
+    --bg:#300a24;
+    --terminal:#2c001e;
+    --text:#eeeeec;
+    --border:#e95420;
+}
+
+/* Dracula */
+
+.theme-dracula{
+    --bg:#282a36;
+    --terminal:#1e1f29;
+    --text:#f8f8f2;
+    --border:#bd93f9;
+}
+
+/* GitHub */
+
+.theme-github{
+    --bg:#ffffff;
+    --terminal:#f6f8fa;
+    --text:#24292f;
+    --border:#d0d7de;
 }

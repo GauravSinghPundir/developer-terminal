@@ -95,6 +95,7 @@
 
 const input=document.getElementById('commandInput');
 const output=document.getElementById('output');
+const prompt = document.getElementById("prompt");
 //////such that data is stored in local storage and when the user comes back to the website the data is still there and not lost
 let todos =
 JSON.parse(localStorage.getItem("todos"))
@@ -120,9 +121,231 @@ let notes=[];
 const AVAILABLE_COMMANDS = [
     "login", "todo", "logout", "whoami", "help", "touch", 
     "pwd", "mkdir", "ls", "tree", "search", "cat", 
-    "write", "history", "cd", "date", "clear"
+    "write","theme","export","download","practice","xp","badges","","history", "cd", "date", "clear"
 ];
 
+let currentTheme =
+    localStorage.getItem("theme") || "matrix";
+
+
+
+/////creating training data for bash learners
+const practiceLevels = [
+    {
+        title: "Level 1 - Basic Navigation",
+        steps: [
+            {
+                instruction: "Create a directory named projects.",
+                expected: "mkdir projects",
+                xp: 10
+            },
+            {
+                instruction: "Navigate into projects.",
+                expected: "cd projects",
+                xp: 10
+            },
+            {
+                instruction: "Show your current directory.",
+                expected: "pwd",
+                xp: 10
+            }
+        ]
+    },
+
+    {
+        title: "Level 2 - Files",
+        steps: [
+            {
+                instruction: "Create a file named app.js",
+                expected: "touch app.js",
+                xp: 15
+            },
+            {
+                instruction: "Write Hello World into app.js",
+                expected: "write app.js Hello World",
+                xp: 20
+            },
+            {
+                instruction: "Display app.js",
+                expected: "cat app.js",
+                xp: 15
+            }
+        ]
+    },
+
+    {
+        title: "Level 3 - Search",
+        steps: [
+            {
+                instruction: "Search for Hello",
+                expected: "search Hello",
+                xp: 20
+            }
+        ]
+    },
+
+    {
+        title: "Level 4 - Navigation",
+        steps: [
+            {
+                instruction: "Return to the root directory.",
+                expected: "cd ..",
+                xp: 15
+            },
+            {
+                instruction: "Display the filesystem tree.",
+                expected: "tree",
+                xp: 20
+            }
+        ]
+    }
+];
+
+let practiceMode = false;
+
+let currentLevel = 0;
+
+let currentStep = 0;
+
+let xp = 0;
+
+let badges = [];
+
+function getRank(){
+
+    if(xp < 100)
+        return "Linux Beginner";
+
+    if(xp < 250)
+        return "Linux Apprentice";
+
+    if(xp < 500)
+        return "Terminal Explorer";
+
+    if(xp < 800)
+        return "Command Line Expert";
+
+    return "Bash Master";
+}
+
+function practiceCommand(){
+
+    practiceMode = true;
+
+    currentLevel = 0;
+
+    currentStep = 0;
+
+    output.innerHTML += `
+    <div>=====================</div>
+    <div>BASH PRACTICE MODE</div>
+    <div>=====================</div>
+    `;
+
+    showCurrentQuestion();
+}
+
+function showCurrentQuestion(){
+
+    const level =
+        practiceLevels[currentLevel];
+
+    const step =
+        level.steps[currentStep];
+
+    output.innerHTML += `
+        <div><b>${level.title}</b></div>
+        <div>${step.instruction}</div>
+    `;
+}
+
+function checkPractice(command){
+
+    if(!practiceMode)
+        return false;
+
+    const level =
+        practiceLevels[currentLevel];
+
+    const step =
+        level.steps[currentStep];
+
+    if(command.trim() === step.expected.trim()){
+
+    xp += step.xp;
+
+    // Award badges
+    if(xp >= 50 && !badges.includes("Navigation Expert")){
+        badges.push("Navigation Expert");
+    }
+
+    if(xp >= 150 && !badges.includes("File Master")){
+        badges.push("File Master");
+    }
+
+    if(xp >= 300 && !badges.includes("Search Ninja")){
+        badges.push("Search Ninja");
+    }
+
+    if(xp >= 500 && !badges.includes("Bash Hero")){
+        badges.push("Bash Hero");
+    }
+
+    output.innerHTML += `
+    <div style="color:lime;">
+    ✅ Correct!
+    +${step.xp} XP
+    </div>
+    `;
+
+    currentStep++;
+
+    if(currentStep >= level.steps.length){
+
+        currentLevel++;
+        currentStep = 0;
+
+        if(currentLevel >= practiceLevels.length){
+
+            practiceMode = false;
+
+            output.innerHTML += `
+            <div>🎉 Training Complete!</div>
+            `;
+
+            return true;
+        }
+
+        output.innerHTML += `
+        <div>🎉 Level Complete!</div>
+        `;
+    }
+
+    showCurrentQuestion();
+
+    return true;
+}
+}
+
+function badgesCommand(){
+
+    output.innerHTML +=
+    `<div><b>Badges</b></div>`;
+
+    if(badges.length===0){
+
+        output.innerHTML +=
+        `<div>No badges earned.</div>`;
+
+        return;
+    }
+
+    badges.forEach(badge=>{
+
+        output.innerHTML +=
+        `<div>🏅 ${badge}</div>`;
+    });
+}
 
 ////definig parser for command line arguments
 
@@ -152,6 +375,71 @@ function loginCommand(args){
         output.innerHTML+=`<div>Invalid creadentials</div>`;
     }
 
+}
+
+function applyTheme(theme){
+
+    document.body.classList.remove(
+        "theme-matrix",
+        "theme-ubuntu",
+        "theme-dracula",
+        "theme-github"
+    );
+
+    document.body.classList.add(
+        "theme-" + theme
+    );
+
+    currentTheme = theme;
+
+    localStorage.setItem(
+        "theme",
+        theme
+    );
+}
+
+function themeCommand(args){
+
+    const theme = args[1];
+
+    if(!theme){
+
+        output.innerHTML += `
+        <div>Available themes:</div>
+        <div>matrix</div>
+        <div>ubuntu</div>
+        <div>dracula</div>
+        <div>github</div>
+        `;
+
+        return;
+    }
+
+    const themes=[
+        "matrix",
+        "ubuntu",
+        "dracula",
+        "github"
+    ];
+
+    if(!themes.includes(theme)){
+
+        output.innerHTML +=
+        `<div>Theme not found.</div>`;
+
+        return;
+    }
+
+    applyTheme(theme);
+
+    output.innerHTML +=
+    `<div>Theme changed to ${theme}</div>`;
+}
+function xpCommand() {
+    output.innerHTML += `
+    <div>XP : ${xp}</div>
+    <div>Rank : ${getRank()}</div>
+    `;
 }
 
 ///// todo command implementation
@@ -327,11 +615,29 @@ function showHelp(){
 
         <br>
 
+        <div><b>Appearance</b></div>
+        <div>theme matrix</div>
+        <div>theme ubuntu</div>
+        <div>theme dracula</div>
+        <div>theme github</div>
+
+        <br>
+
         <div><b>Utility Commands</b></div>
+        <div><b>Export</b></div>
+        <div>export workspace</div>
+        <div>download &lt;filename | path&gt;</div>
         <div>history</div>
         <div>date</div>
         <div>clear</div>
         <div>help</div>
+
+        <br>
+
+        <div><b>Learning Mode</b></div>
+        <div>practice &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Start Bash Practice Mode</div>
+        <div>xp &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Show current XP and Rank</div>
+        <div>badges &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Show earned achievement badges</div>
 
         <br>
 
@@ -493,6 +799,207 @@ function searchFiles(node, currentPath, keyword, results){
             }
         }
     }
+}
+
+
+
+
+async function exportWorkspaceCommand(args){
+
+    if(args.length < 2 || args[1] !== "workspace"){
+
+        output.innerHTML +=
+        `<div>Usage: export workspace</div>`;
+
+        return;
+    }
+
+    const zip = new JSZip();
+
+    // -------------------------
+    // Metadata
+    // -------------------------
+
+    zip.file(
+        "filesystem.json",
+        JSON.stringify(filesystem,null,2)
+    );
+
+    zip.file(
+        "todos.json",
+        JSON.stringify(todos,null,2)
+    );
+
+    zip.file(
+        "history.json",
+        JSON.stringify(commandHistory,null,2)
+    );
+
+    zip.file(
+        "settings.json",
+        JSON.stringify({
+            username,
+            currentPath,
+            currentTheme
+        },null,2)
+    );
+
+    // -------------------------
+    // Export all files
+    // -------------------------
+
+    function exportDirectory(node,path){
+
+        for(const [name,value] of Object.entries(node)){
+
+            if(typeof value==="object"){
+
+                exportDirectory(
+                    value,
+                    path + name + "/"
+                );
+
+            }
+
+            else{
+
+                zip.file(
+                    path + name,
+                    value
+                );
+
+            }
+
+        }
+
+    }
+
+    exportDirectory(
+        filesystem["/"],
+        ""
+    );
+
+    const blob =
+        await zip.generateAsync({
+            type:"blob"
+        });
+
+    const a =
+        document.createElement("a");
+
+    a.href =
+        URL.createObjectURL(blob);
+
+    a.download =
+        "workspace.zip";
+
+    a.click();
+
+    URL.revokeObjectURL(a.href);
+
+    output.innerHTML +=
+    `<div>Workspace exported.</div>`;
+}
+
+
+
+function downloadCommand(args){
+
+    const input = args[1];
+
+    if(!input){
+
+        output.innerHTML +=
+        `<div>Usage: download filename</div>`;
+
+        return;
+    }
+
+    let current;
+    let fileName;
+
+    // -------------------------
+    // Absolute path
+    // -------------------------
+
+    if(input.startsWith("/")){
+
+        current = filesystem["/"];
+
+        const parts =
+            input.split("/")
+                 .filter(Boolean);
+
+        fileName = parts.pop();
+
+        for(const folder of parts){
+
+            if(
+                !(folder in current) ||
+                typeof current[folder] !== "object"
+            ){
+
+                output.innerHTML +=
+                `<div>Directory not found</div>`;
+
+                return;
+            }
+
+            current = current[folder];
+
+        }
+
+    }
+
+    // -------------------------
+    // Current directory
+    // -------------------------
+
+    else{
+
+        current = getCurrentDirectory();
+
+        fileName = input;
+
+    }
+
+    if(!(fileName in current)){
+
+        output.innerHTML +=
+        `<div>File not found</div>`;
+
+        return;
+    }
+
+    if(typeof current[fileName] === "object"){
+
+        output.innerHTML +=
+        `<div>Cannot download a folder.</div>`;
+
+        return;
+    }
+
+    const blob =
+        new Blob(
+            [current[fileName]],
+            {type:"text/plain"}
+        );
+
+    const a =
+        document.createElement("a");
+
+    a.href =
+        URL.createObjectURL(blob);
+
+    a.download =
+        fileName;
+
+    a.click();
+
+    URL.revokeObjectURL(a.href);
+
+    output.innerHTML +=
+    `<div>${fileName} downloaded.</div>`;
 }
 
 
@@ -759,6 +1266,10 @@ function clearCommand(){
 }
 
 function executeCommand(input){
+    if(practiceMode){
+    if(checkPractice(input))
+        return;
+    }
 
     if(!input.trim()) return;
 
@@ -783,6 +1294,24 @@ function executeCommand(input){
         case "whoami":
             whoamiCommand();
             break;
+        
+        case "theme":
+        themeCommand(args);
+        break;
+
+        case "export":
+        exportWorkspaceCommand(args);
+        break;
+
+
+        case "download":
+        downloadCommand(args);
+        break;
+
+        case "badges":
+        badgesCommand();
+        break;
+
 
         case "help":
             showHelp();
@@ -813,8 +1342,13 @@ function executeCommand(input){
         break;
 
 
+        case "practice":
+        practiceCommand();
+        break;
 
-
+        case "xp":
+        xpCommand();
+        break;
 
 
         case "cat":
@@ -969,3 +1503,4 @@ input.addEventListener("keydown", function(e){
         }, 0);
     }
 });
+applyTheme(currentTheme);
