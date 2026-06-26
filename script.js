@@ -117,6 +117,12 @@ let commandHistory =[];
 let historyIndex = 0;
 
 let notes=[];
+const AVAILABLE_COMMANDS = [
+    "login", "todo", "logout", "whoami", "help", "touch", 
+    "pwd", "mkdir", "ls", "tree", "search", "cat", 
+    "write", "history", "cd", "date", "clear"
+];
+
 
 ////definig parser for command line arguments
 
@@ -905,5 +911,61 @@ input.addEventListener("keydown", function(e){
 
             input.value = "";
         }
+    }
+    // ==========================================
+    // NEW TAB-COMPLETION LOGIC STARTS HERE
+    // ==========================================
+    else if(e.key === "Tab"){
+        e.preventDefault(); // Prevents the browser from focusing off the input
+
+        const currentInput = input.value.trimStart();
+        if (!currentInput) return;
+
+        const args = currentInput.split(/\s+/);
+        const lastWord = args[args.length - 1];
+
+        // Case 1: Auto-completing a root command (e.g., "mk" -> "mkdir")
+        if(args.length === 1){
+            const matches = AVAILABLE_COMMANDS.filter(cmd => cmd.startsWith(lastWord));
+            
+            if(matches.length === 1){
+                // Exactly one match: complete it and add a space
+                input.value = matches[0] + " ";
+            } else if (matches.length > 1) {
+                // Multiple matches: show them to the user like a real terminal
+                output.innerHTML += `<div>> ${currentInput}</div>`;
+                output.innerHTML += `<div>${matches.join(" &nbsp;&nbsp; ")}</div>`;
+            }
+        } 
+        
+        // Case 2: Auto-completing a file or directory (e.g., "cd pro" -> "cd projects")
+        else if (args.length === 2) {
+            const command = args[0];
+            const validFileCommands = ["cd", "cat", "ls", "touch", "mkdir", "write"];
+
+            if (validFileCommands.includes(command)) {
+                const currentDir = getCurrentDirectory();
+                
+                if (currentDir) {
+                    const items = Object.keys(currentDir);
+                    const matches = items.filter(item => item.startsWith(lastWord));
+
+                    if (matches.length === 1) {
+                        // Exactly one file/folder match
+                        args[args.length - 1] = matches[0];
+                        input.value = args.join(" ") + (typeof currentDir[matches[0]] === "object" ? "/" : "");
+                    } else if (matches.length > 1) {
+                        // Multiple file/folder matches
+                        output.innerHTML += `<div>> ${currentInput}</div>`;
+                        output.innerHTML += `<div>${matches.map(m => typeof currentDir[m] === "object" ? m+"/" : m).join(" &nbsp;&nbsp; ")}</div>`;
+                    }
+                }
+            }
+        }
+        
+        // Ensure cursor goes to the end of the newly completed word
+        setTimeout(() => {
+            input.selectionStart = input.selectionEnd = input.value.length;
+        }, 0);
     }
 });
